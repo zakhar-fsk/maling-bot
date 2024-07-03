@@ -141,22 +141,24 @@
         </label>
         <label><input class="form_submit" type="submit" value="Get auth code"></label>
     </form>
-    <form action="/account_signin" method="post">
-        <label>
-            <p>Code</p>
-            <input name="code" type="text" required>
-            <p class="input_error"></p>
-        </label>
+    {% if not account_connected %}
+        <form action="/account_signin" method="post">
+            <label>
+                <p>Code</p>
+                <input name="code" type="text" required>
+                <p class="input_error"></p>
+            </label>
 
-        <label>
-            <p>Password</p>
-            <input name="password" type="text">
-            {% if need_password %}
-                <p class="input_error">For continue, enter code and password from account</p>
-            {% endif %}
-        </label>
-        <label><input class="form_submit" type="submit" value="Authorize account"></label>
-    </form>
+            <label>
+                <p>Password</p>
+                <input name="password" type="text">
+                {% if need_password %}
+                    <p class="input_error">For continue, enter code and password from account</p>
+                {% endif %}
+            </label>
+            <label><input class="form_submit" type="submit" value="Authorize account"></label>
+        </form>
+    {% endif %}
     <form action="/send_message" method="post">
         <label>
             <p>Chat ID</p>

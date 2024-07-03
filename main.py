@@ -1,3 +1,4 @@
+from asgiref.sync import async_to_sync
 from fastapi import FastAPI
 from loguru import logger
 from starlette import status
@@ -18,7 +19,8 @@ logger.add(
 
 app = FastAPI()
 templates = Jinja2Templates(directory="./templates")
-client = UserBot()
+client: UserBot = UserBot()
+
 
 # TODO: Додати обробку помилок, коли треба ввести пароль коли ні
 # TODO: При відприавці коду треба ше відправити номер телефону, можна додавати ці поля в клас UserBot
@@ -28,12 +30,13 @@ client = UserBot()
 @logger.catch
 async def root(request: Request):
     context = {
-        "account_connected": client.user_client is not None and await client.user_client.is_user_authorized(),
+        "account_connected": client.user_client is not None and await client.user_client.is_user_authorized() and client.user_client.is_connected(),
         "need_password": client.need_password,
     }
     logger.info(client.user_client)
+    logger.info(client.user_client is not None and await client.user_client.is_user_authorized() and client.user_client.is_connected())
 
-    if client.user_client is not None and await client.user_client.is_user_authorized():
+    if client.user_client is not None and await client.user_client.is_user_authorized() and client.user_client.is_connected():
         context["groups"] = await client.get_list_groups()
 
     return templates.TemplateResponse(
@@ -52,7 +55,7 @@ async def send_auth_code(request: Request):
     client.app_id = int(form_data.get("app_id"))
     client.app_hash = form_data.get("app_hash")
     client.phone_number = form_data.get("phone_number")
-
+    logger.info(client)
     await client.authorize()
     return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
 
@@ -62,7 +65,10 @@ async def send_auth_code(request: Request):
 async def account_signin(request: Request):
     logger.info(f'account_signin - {await request.form()}')
     form_data = await request.form()
-    await client.sign_in(form_data.get("code"))
+    if client.need_password:
+        await client.sign_in_password(form_data.get("password"))
+    else:
+        await client.sign_in(form_data.get("code"))
     return RedirectResponse("/", status_code=status.HTTP_303_SEE_OTHER)
 
 

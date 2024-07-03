@@ -1,6 +1,7 @@
 from loguru import logger
 from telethon import functions, TelegramClient
 from telethon.errors import SessionPasswordNeededError
+from asgiref.sync import async_to_sync
 from telethon.sessions import StringSession
 
 
@@ -45,6 +46,9 @@ class UserBotSettings:
     def need_password(self, value):
         self._need_password = value
 
+    def __str__(self):
+        return f"App ID: {self._app_id}, App Hash: {self._app_hash}, Phone number: {self._phone_number}"
+
 
 class UserBot(UserBotSettings):
     @logger.catch
@@ -53,12 +57,16 @@ class UserBot(UserBotSettings):
 
     @logger.catch
     async def init_client(self):
-        self.user_client = TelegramClient(StringSession("session"), self._app_id, self._app_hash)
+        self.user_client = TelegramClient("session", self._app_id, self._app_hash)
 
     @classmethod
-    async def create(cls, api_id: str, api_hash: str) -> 'UserBot':
-        self = cls(api_id, api_hash)
-        await self.user_client.connect()
+    async def create(cls) -> 'UserBot':
+        self = cls()
+        try:
+            await self.init_client()
+            await self.user_client.connect()
+        except Exception as e:
+            logger.exception(e)
         return self
 
     @logger.catch
@@ -84,6 +92,7 @@ class UserBot(UserBotSettings):
     async def sign_in_password(self, password: str):
         try:
             await self.user_client.sign_in(password=password)
+            self._need_password = False
         except Exception as e:
             logger.exception(e)
 
